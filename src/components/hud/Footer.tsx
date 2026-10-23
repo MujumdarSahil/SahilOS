@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2 font-mono text-sm font-bold text-ice mb-1">
             <span className="text-cyan">SAHIL.OS</span>
-            <span>//</span>
+            <span>{"//"}</span>
             <span>{profileData.name}</span>
           </div>
           <p className="font-mono text-xs text-ice-muted max-w-md">
@@ -23,7 +23,7 @@ export const Footer: React.FC = () => {
           </p>
           <div className="flex items-center space-x-2 mt-2 font-mono text-[11px] text-stark-green">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>LEVEL-05 SECURITY VERIFIED // ZERO-TRUST PROTOCOLS ENFORCED</span>
+            <span>{"LEVEL-05 SECURITY VERIFIED // ZERO-TRUST PROTOCOLS ENFORCED"}</span>
           </div>
         </div>
 

@@ -56,7 +56,7 @@ export const DossiersSection: React.FC<DossiersSectionProps> = ({ onSelectDossie
         <div>
           <div className="flex items-center space-x-2 font-mono text-xs text-cyan tracking-widest mb-1">
             <Layers className="h-4 w-4" />
-            <span>// MISSION.ARCHIVE — LEVEL-05 CLEARANCE</span>
+            <span>{"// MISSION.ARCHIVE — LEVEL-05 CLEARANCE"}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold font-sans text-ice">
             Interactive Mission Dossiers

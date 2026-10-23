@@ -180,7 +180,7 @@ export const DossierDetailView: React.FC<DossierDetailViewProps> = ({ dossier })
         {/* Implementation Specifications */}
         <div className="space-y-3">
           <h2 className="font-mono text-xs font-bold text-cyan tracking-widest uppercase">
-            // IMPLEMENTATION SPECIFICATIONS & ENGINEERING DRILLS
+            {"// IMPLEMENTATION SPECIFICATIONS & ENGINEERING DRILLS"}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {dossier.implementationDetails.map((detail, index) => (

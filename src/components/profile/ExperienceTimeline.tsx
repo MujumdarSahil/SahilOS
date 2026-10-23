@@ -11,7 +11,7 @@ export const ExperienceTimeline: React.FC = () => {
       <div className="mb-12 pb-4 border-b border-cyan/15">
         <div className="flex items-center space-x-2 font-mono text-xs text-cyan tracking-widest mb-1">
           <Briefcase className="h-4 w-4" />
-          <span>// DEPLOYMENT.RECORD — VERIFIED MISSIONS</span>
+          <span>{"// DEPLOYMENT.RECORD — VERIFIED MISSIONS"}</span>
         </div>
         <h2 className="text-3xl sm:text-4xl font-bold font-sans text-ice">
           Verified Experience Timeline

@@ -66,7 +66,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* Heading */}
           <div className="space-y-2">
             <div className="font-mono text-xs sm:text-sm tracking-widest text-cyan uppercase">
-              // STARK-GRADE ENGINEERING COMMAND CENTER
+              {"// STARK-GRADE ENGINEERING COMMAND CENTER"}
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-sans text-ice tracking-tight">
               {profileData.name}

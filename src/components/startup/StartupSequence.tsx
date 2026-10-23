@@ -89,7 +89,7 @@ export const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) 
       {/* Top Telemetry */}
       <div className="absolute top-6 left-6 flex items-center space-x-2 text-cyan font-mono text-xs tracking-wider">
         <Zap className="h-4 w-4 animate-pulse text-cyan" />
-        <span>SAHIL.OS // STARK.CORE.v2.0</span>
+        <span>{"SAHIL.OS // STARK.CORE.v2.0"}</span>
       </div>
 
       {/* Skip Button */}
@@ -149,7 +149,7 @@ export const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) 
 
       {/* Footer System Clearance */}
       <p className="absolute bottom-6 font-mono text-[10px] text-ice-muted/60 tracking-widest text-center">
-        RESTRICTED LEVEL-05 WORKSPACE // AUTHORIZED VISITOR SESSION GRANTED
+        {"RESTRICTED LEVEL-05 WORKSPACE // AUTHORIZED VISITOR SESSION GRANTED"}
       </p>
     </div>
   );

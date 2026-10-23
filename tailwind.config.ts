@@ -44,8 +44,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Space Grotesk", "Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "Courier New", "monospace"],
+        sans: ["var(--font-sans)", "Space Grotesk", "Inter", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "Courier New", "monospace"],
       },
       boxShadow: {
         "hud-cyan": "0 0 15px rgba(72, 221, 245, 0.25)",

@@ -14,7 +14,7 @@ export default function DossierNotFound() {
 
         <div>
           <span className="font-mono text-xs text-amber tracking-widest uppercase">
-            // TELEMETRY ERROR 404: CLASSIFIED DOSSIER UNRESOLVED
+            {"// TELEMETRY ERROR 404: CLASSIFIED DOSSIER UNRESOLVED"}
           </span>
           <h1 className="text-2xl sm:text-3xl font-bold font-sans text-ice mt-2">
             Mission Record Not Found
