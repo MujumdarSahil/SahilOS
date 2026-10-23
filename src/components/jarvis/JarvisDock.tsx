@@ -2,21 +2,20 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import {
-  MessageSquare,
   Send,
   X,
   Minimize2,
   Maximize2,
-  Cpu,
   Bot,
   User,
   Sparkles,
+  RotateCcw,
+  AlertCircle,
+  ExternalLink,
+  ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
-import { profileData } from "@/data/profile";
-import { projectsData } from "@/data/projects";
-import { experienceData } from "@/data/experience";
-import { certificationsData } from "@/data/certifications";
-import { publicationsData } from "@/data/publications";
+import { SafeAction, SafeActionSchema, getActionLabel } from "@/lib/ai/actions";
 
 interface JarvisDockProps {
   isOpen: boolean;
@@ -30,6 +29,9 @@ interface ChatMessage {
   sender: "user" | "jarvis";
   text: string;
   timestamp: string;
+  sources?: string[];
+  action?: SafeAction;
+  isError?: boolean;
 }
 
 const SUGGESTIONS = [
@@ -56,80 +58,116 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
   ]);
   const [input, setInput] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+    if (typeof messagesEndRef.current?.scrollIntoView === "function") {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isLoading]);
 
   if (!isOpen) return null;
 
-  // Local Grounded Knowledge Resolver for Phase 1
-  const resolveQuery = (query: string): string => {
-    const q = query.toLowerCase();
+  const executeAction = (action?: SafeAction) => {
+    if (!action) return;
 
-    if (q.includes("llm") || q.includes("rag") || q.includes("omnitutor")) {
-      return `Sahil engineered OmniTutor AI (a resilient multi-LLM orchestrator routing prompts dynamically across OpenAI, Groq, and Gemini with FAISS vector indexing and circuit breaker fallbacks) and MedAgentX (an agentic clinical AI platform with programmable multi-agent workflows and RAG).`;
+    // Validate action before execution
+    const parse = SafeActionSchema.safeParse(action);
+    if (!parse.success) return;
+
+    const validated = parse.data;
+    if (validated.type === "navigate" && onNavigateSection) {
+      onNavigateSection(validated.targetSection);
+    } else if (validated.type === "open_dossier" && onOpenProjectDossier) {
+      onOpenProjectDossier(validated.dossierId);
+    } else if (validated.type === "open_resume") {
+      window.open("/resume-sahil.pdf", "_blank");
     }
-
-    if (q.includes("medagentx") || q.includes("doctor")) {
-      const p = projectsData.find((proj) => proj.id === "medagentx");
-      return `MedAgentX is an Agentic AI Platform for Clinical Decision Support. Built with Python, FastAPI, FAISS, and multi-agent verification guardrails to eliminate hallucination in medical reasoning. Research paper is currently in review.`;
-    }
-
-    if (q.includes("nic") || q.includes("informatics") || q.includes("government")) {
-      const exp = experienceData.find((e) => e.id === "national-informatics-centre");
-      return `At the National Informatics Centre (NIC), Government of India, Sahil served as a Data Analyst Intern (July 2024 – June 2025). He developed an election dashboard resulting in a 30% improvement in data accessibility, performed security audits driving a 40% security enhancement, and implemented Redis caching cutting response times by 25%.`;
-    }
-
-    if (q.includes("cert") || q.includes("credential")) {
-      const names = certificationsData.map((c) => `${c.name} (${c.issuer})`).join("; ");
-      return `Sahil holds 8 verified credentials including: ${names}. All are accessible via the Credential Registry section.`;
-    }
-
-    if (q.includes("paper") || q.includes("publication") || q.includes("research")) {
-      const pubs = publicationsData.map((p) => `"${p.title}" (${p.status} at ${p.venue})`).join("\n\n");
-      return `Sahil has 2 major publication records:\n\n${pubs}`;
-    }
-
-    if (q.includes("contact") || q.includes("email") || q.includes("hire") || q.includes("phone")) {
-      return `Sahil is based in Mumbai, India and is available for high-impact AI/ML roles. Reach him directly at ${profileData.email} or call ${profileData.phoneDisplay}.`;
-    }
-
-    if (q.includes("tobox") || q.includes("experience") || q.includes("work")) {
-      return `Sahil currently works as a Jr. Data Scientist at Tobox Ventures (July 2025 – Present) building predictive pipelines and analytical ML models. Previously he was at National Informatics Centre (NIC) and Zscaler.`;
-    }
-
-    return `I have recorded your query. In Phase 4, full neural streaming with server-side LLMs is linked to this terminal. You can explore verified details right now in the Mission Dossiers and Capability Matrix sections.`;
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async (messageToSend?: string) => {
+    const query = (messageToSend || input).trim();
+    if (!query || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: String(Date.now()),
       sender: "user",
-      text: input.trim(),
+      text: query,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    const currentInput = input.trim();
     setInput("");
-    setIsTyping(true);
+    setIsLoading(true);
+    setLastFailedMessage(null);
 
-    setTimeout(() => {
-      const answer = resolveQuery(currentInput);
+    // Extract minimal history for context
+    const historyPayload = messages.slice(-4).map((m) => ({
+      role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+      content: m.text,
+    }));
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: query,
+          history: historyPayload,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      let validatedAction: SafeAction | undefined = undefined;
+      if (data.action) {
+        const actionResult = SafeActionSchema.safeParse(data.action);
+        if (actionResult.success) {
+          validatedAction = actionResult.data;
+        }
+      }
+
       const jarvisMessage: ChatMessage = {
         id: String(Date.now() + 1),
         sender: "jarvis",
-        text: answer,
+        text: data.response || "No response received.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        sources: Array.isArray(data.sources) ? data.sources : undefined,
+        action: validatedAction,
       };
+
       setMessages((prev) => [...prev, jarvisMessage]);
-      setIsTyping(false);
-    }, 600);
+    } catch {
+      setLastFailedMessage(query);
+      const errorMessage: ChatMessage = {
+        id: String(Date.now() + 1),
+        sender: "jarvis",
+        text: "Direct neural link encountered an obstacle. Tap 'Retry Directive' or consult the Mission Dossiers and Capability Matrix.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isError: true,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setMessages([
+      {
+        id: "init-reset",
+        sender: "jarvis",
+        text: `Terminal reset complete. All diagnostic logs cleared. Standing by for your instructions.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+    setLastFailedMessage(null);
   };
 
   return (
@@ -140,7 +178,7 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
       className={`fixed z-50 transition-all duration-300 shadow-2xl ${
         isMinimized
           ? "bottom-4 right-4 w-72"
-          : "bottom-4 right-4 w-[92vw] sm:w-[440px] h-[550px] max-h-[85vh]"
+          : "bottom-4 right-4 w-[92vw] sm:w-[440px] h-[560px] max-h-[85vh]"
       } hud-panel bg-gunmetal/95 rounded-lg border border-cyan/40 flex flex-col overflow-hidden`}
     >
       {/* Title Header */}
@@ -156,13 +194,22 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
                 ACTIVE
               </span>
             </div>
-            <div className="font-mono text-[9px] text-ice-muted">
-              GROUNDED KNOWLEDGE AGENT
+            <div className="font-mono text-[9px] text-stark-green flex items-center space-x-1">
+              <ShieldCheck className="h-2.5 w-2.5" />
+              <span>GROUNDED RETRIEVAL // ZERO-TRUST</span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-1 text-ice-muted">
+          <button
+            onClick={handleReset}
+            aria-label="Reset conversation"
+            title="Reset Terminal Session"
+            className="p-1 hover:text-amber rounded hover:bg-gunmetal"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={() => setIsMinimized(!isMinimized)}
             aria-label={isMinimized ? "Maximize assistant" : "Minimize assistant"}
@@ -183,7 +230,10 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
       {!isMinimized && (
         <>
           {/* Messages Stream */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 font-sans text-xs">
+          <div
+            className="flex-1 overflow-y-auto p-4 space-y-3 font-sans text-xs"
+            aria-live="polite"
+          >
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -202,13 +252,44 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
                 </div>
 
                 <div
-                  className={`max-w-[80%] rounded p-3 ${
+                  className={`max-w-[85%] rounded p-3 ${
                     msg.sender === "user"
                       ? "bg-amber/15 text-ice border border-amber/30 text-right"
+                      : msg.isError
+                      ? "bg-amber/15 text-amber border border-amber/40 text-left"
                       : "bg-gunmetal-surface text-ice border border-cyan/20 text-left"
                   }`}
                 >
                   <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
+
+                  {/* Sources List */}
+                  {msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-cyan/15 flex flex-wrap gap-1 items-center">
+                      <span className="font-mono text-[9px] text-ice-muted uppercase">SOURCES:</span>
+                      {msg.sources.map((src, i) => (
+                        <span
+                          key={i}
+                          className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-gunmetal text-cyan border border-cyan/25"
+                        >
+                          {src}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Proposed Safe Action Button */}
+                  {msg.action && (
+                    <div className="mt-2.5 pt-2 border-t border-cyan/20">
+                      <button
+                        onClick={() => executeAction(msg.action)}
+                        className="flex items-center space-x-1.5 rounded bg-cyan/20 hover:bg-cyan/30 text-cyan border border-cyan/40 px-2.5 py-1 font-mono text-[10px] font-semibold transition"
+                      >
+                        <span>{getActionLabel(msg.action)}</span>
+                        <ChevronRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+
                   <span className="block mt-1 font-mono text-[9px] text-ice-muted/60">
                     {msg.timestamp}
                   </span>
@@ -216,12 +297,28 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
               </div>
             ))}
 
-            {isTyping && (
+            {isLoading && (
               <div className="flex items-center space-x-2 text-cyan font-mono text-xs pl-8">
                 <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                <span>PROCESSING INTEL...</span>
+                <span>CONSULTING VERIFIED ARCHIVE...</span>
               </div>
             )}
+
+            {lastFailedMessage && !isLoading && (
+              <div className="flex items-center justify-between p-2 rounded bg-amber/10 border border-amber/30 text-[11px] font-mono text-amber">
+                <div className="flex items-center space-x-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span>Query failed</span>
+                </div>
+                <button
+                  onClick={() => handleSend(lastFailedMessage)}
+                  className="underline hover:text-ice ml-2"
+                >
+                  Retry Directive
+                </button>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -230,10 +327,9 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
             {SUGGESTIONS.slice(0, 3).map((prompt, idx) => (
               <button
                 key={idx}
-                onClick={() => {
-                  setInput(prompt);
-                }}
-                className="rounded bg-gunmetal px-2 py-1 font-mono text-[10px] text-cyan hover:bg-cyan/15 hover:border-cyan/40 border border-cyan/15 transition truncate max-w-full"
+                disabled={isLoading}
+                onClick={() => handleSend(prompt)}
+                className="rounded bg-gunmetal px-2 py-1 font-mono text-[10px] text-cyan hover:bg-cyan/15 hover:border-cyan/40 border border-cyan/15 transition truncate max-w-full disabled:opacity-50"
               >
                 {prompt}
               </button>
@@ -245,17 +341,19 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
             <input
               type="text"
               value={input}
+              disabled={isLoading}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSend();
               }}
               placeholder="Query JARVIS regarding Sahil's work..."
-              className="flex-1 bg-obsidian rounded border border-cyan/20 px-3 py-2 font-mono text-xs text-ice placeholder-ice-muted/50 focus:outline-none focus:border-cyan"
+              className="flex-1 bg-obsidian rounded border border-cyan/20 px-3 py-2 font-mono text-xs text-ice placeholder-ice-muted/50 focus:outline-none focus:border-cyan disabled:opacity-50"
             />
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
+              disabled={isLoading || !input.trim()}
               aria-label="Send message to JARVIS"
-              className="flex h-8 w-8 items-center justify-center rounded bg-cyan text-obsidian hover:bg-cyan-bright transition font-bold"
+              className="flex h-8 w-8 items-center justify-center rounded bg-cyan text-obsidian hover:bg-cyan-bright transition font-bold disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </button>
