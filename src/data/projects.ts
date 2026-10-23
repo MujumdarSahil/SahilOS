@@ -5,6 +5,7 @@ export interface MissionDossier {
   date: string;
   category: "AI / AGENTIC" | "LLM / RAG" | "BLOCKCHAIN" | "ML / PREDICTIVE";
   status: "JOURNAL SUBMISSION" | "ACTIVE DEPLOYMENT" | "PUBLISHED (INCET 2025)" | "RESEARCH COMPLETED";
+  maturityLevel: "PRODUCTION DEPLOYED" | "PEER-REVIEWED PUBLICATION" | "JOURNAL UNDER PREPARATION" | "RESEARCH PROTOTYPE";
   summary: string;
   objective: string;
   problemStatement: string;
@@ -28,6 +29,7 @@ export const projectsData: MissionDossier[] = [
     date: "JUNE 2025",
     category: "AI / AGENTIC",
     status: "JOURNAL SUBMISSION",
+    maturityLevel: "JOURNAL UNDER PREPARATION",
     summary:
       "Agentic AI platform empowering clinical practitioners and medical researchers with programmable recommendation agents, hybrid retrieval-augmented generation, and strict human-in-the-loop diagnostic guardrails.",
     objective:
@@ -63,6 +65,7 @@ export const projectsData: MissionDossier[] = [
     date: "JANUARY 2026",
     category: "LLM / RAG",
     status: "ACTIVE DEPLOYMENT",
+    maturityLevel: "PRODUCTION DEPLOYED",
     summary:
       "High-availability LLM routing gateway dynamically balancing prompt workloads across OpenAI, Groq, and Google Gemini with FAISS vector search, circuit-breaker failovers, and real-time observability.",
     objective:
@@ -98,6 +101,7 @@ export const projectsData: MissionDossier[] = [
     date: "JUNE 2024",
     category: "BLOCKCHAIN",
     status: "PUBLISHED (INCET 2025)",
+    maturityLevel: "PEER-REVIEWED PUBLICATION",
     summary:
       "Tamper-proof military ordnance tracking system utilizing Solidity smart contracts, cryptographic access controls, and immutable ledger logging for national defense logistics.",
     objective:
@@ -133,6 +137,7 @@ export const projectsData: MissionDossier[] = [
     date: "APRIL 2024",
     category: "ML / PREDICTIVE",
     status: "RESEARCH COMPLETED",
+    maturityLevel: "RESEARCH PROTOTYPE",
     summary:
       "End-to-end predictive machine learning framework forecasting supply consumption rates, wear thresholds, and procurement scheduling from multi-variable operational telemetry.",
     objective:
