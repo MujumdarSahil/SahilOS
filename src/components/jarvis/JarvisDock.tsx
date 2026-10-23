@@ -11,11 +11,12 @@ import {
   Sparkles,
   RotateCcw,
   AlertCircle,
-  ExternalLink,
   ChevronRight,
   ShieldCheck,
 } from "lucide-react";
 import { SafeAction, SafeActionSchema, getActionLabel } from "@/lib/ai/actions";
+import { JarvisVoiceControls } from "./JarvisVoiceControls";
+import { jarvisVoiceSynthesizer } from "@/lib/speech/synthesis";
 
 interface JarvisDockProps {
   isOpen: boolean;
@@ -59,6 +60,7 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
   const [input, setInput] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +69,20 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isLoading]);
+
+  // Cancel speech synthesis when dock closes or unmounts
+  useEffect(() => {
+    return () => {
+      jarvisVoiceSynthesizer.stop();
+      setIsSpeaking(false);
+    };
+  }, []);
+
+  const handleClose = () => {
+    jarvisVoiceSynthesizer.stop();
+    setIsSpeaking(false);
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -90,6 +106,10 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
   const handleSend = async (messageToSend?: string) => {
     const query = (messageToSend || input).trim();
     if (!query || isLoading) return;
+
+    // Stop ongoing speech
+    jarvisVoiceSynthesizer.stop();
+    setIsSpeaking(false);
 
     const userMessage: ChatMessage = {
       id: String(Date.now()),
@@ -133,16 +153,28 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
         }
       }
 
+      const replyText = data.response || "No response received.";
+
       const jarvisMessage: ChatMessage = {
         id: String(Date.now() + 1),
         sender: "jarvis",
-        text: data.response || "No response received.",
+        text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         sources: Array.isArray(data.sources) ? data.sources : undefined,
         action: validatedAction,
       };
 
       setMessages((prev) => [...prev, jarvisMessage]);
+
+      // Speak response if voice audio output is unmuted
+      if (!jarvisVoiceSynthesizer.getMuted()) {
+        jarvisVoiceSynthesizer.speak(
+          replyText,
+          () => setIsSpeaking(true),
+          () => setIsSpeaking(false),
+          () => setIsSpeaking(false)
+        );
+      }
     } catch {
       setLastFailedMessage(query);
       const errorMessage: ChatMessage = {
@@ -159,6 +191,8 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
   };
 
   const handleReset = () => {
+    jarvisVoiceSynthesizer.stop();
+    setIsSpeaking(false);
     setMessages([
       {
         id: "init-reset",
@@ -178,7 +212,7 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
       className={`fixed z-50 transition-all duration-300 shadow-2xl ${
         isMinimized
           ? "bottom-4 right-4 w-72"
-          : "bottom-4 right-4 w-[92vw] sm:w-[440px] h-[560px] max-h-[85vh]"
+          : "bottom-4 right-4 w-[92vw] sm:w-[440px] h-[580px] max-h-[85vh]"
       } hud-panel bg-gunmetal/95 rounded-lg border border-cyan/40 flex flex-col overflow-hidden`}
     >
       {/* Title Header */}
@@ -218,7 +252,7 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
             {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
           </button>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close assistant"
             className="p-1 hover:text-cyan rounded hover:bg-gunmetal"
           >
@@ -336,7 +370,15 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
             ))}
           </div>
 
-          {/* Input Box */}
+          {/* Voice Input & Speech Output Tactical Strip */}
+          <JarvisVoiceControls
+            onTranscriptReceived={(transcript) => handleSend(transcript)}
+            isSpeaking={isSpeaking}
+            onStopSpeaking={() => setIsSpeaking(false)}
+            disabled={isLoading}
+          />
+
+          {/* Text Input Box */}
           <div className="p-3 bg-gunmetal-surface border-t border-cyan/20 flex items-center space-x-2">
             <input
               type="text"
@@ -346,7 +388,7 @@ export const JarvisDock: React.FC<JarvisDockProps> = ({
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSend();
               }}
-              placeholder="Query JARVIS regarding Sahil's work..."
+              placeholder="Type directive or query JARVIS..."
               className="flex-1 bg-obsidian rounded border border-cyan/20 px-3 py-2 font-mono text-xs text-ice placeholder-ice-muted/50 focus:outline-none focus:border-cyan disabled:opacity-50"
             />
             <button

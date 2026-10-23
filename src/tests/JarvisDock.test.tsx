@@ -76,7 +76,7 @@ describe("Phase 4: JarvisDock Assistant Component", () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(/Query JARVIS regarding Sahil's work/i);
+    const input = screen.getByPlaceholderText(/Type directive or query JARVIS/i);
     fireEvent.change(input, { target: { value: "Tell me about OmniTutor" } });
 
     const sendBtn = screen.getByRole("button", { name: /send message to jarvis/i });
