@@ -100,6 +100,7 @@ export default function Home() {
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           onOpenRecruiterDossier={() => setRecruiterModalOpen(true)}
           onToggleJarvis={() => setJarvisOpen(true)}
+          onNavigateSection={handleNavigateSection}
         />
 
         <DossiersSection

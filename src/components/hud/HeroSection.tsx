@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  ShieldAlert,
   FileDown,
   Layers,
   MessageSquare,
@@ -11,17 +10,19 @@ import {
   Activity,
 } from "lucide-react";
 import { profileData } from "@/data/profile";
-import { FallbackCore } from "@/components/core/FallbackCore";
+import { IntelligenceCore } from "@/components/core/IntelligenceCore";
 
 interface HeroSectionProps {
   onOpenCommandPalette: () => void;
   onOpenRecruiterDossier: () => void;
   onToggleJarvis: () => void;
+  onNavigateSection?: (sectionId: string) => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onOpenRecruiterDossier,
   onToggleJarvis,
+  onNavigateSection,
 }) => {
   const [uptime, setUptime] = useState("00:00:00");
 
@@ -37,9 +38,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const scrollToDossiers = () => {
-    const el = document.getElementById("dossiers");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+  const scrollToSection = (sectionId: string) => {
+    if (onNavigateSection) {
+      onNavigateSection(sectionId);
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
@@ -97,7 +102,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="flex flex-wrap items-center gap-3 pt-2 font-mono text-xs">
             {/* Mission Dossiers Trigger */}
             <button
-              onClick={scrollToDossiers}
+              onClick={() => scrollToSection("dossiers")}
               className="flex items-center space-x-2 rounded bg-cyan px-4 py-2.5 font-bold text-obsidian shadow-hud-cyan hover:bg-cyan-bright transition"
             >
               <Layers className="h-4 w-4" />
@@ -144,9 +149,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         {/* Right Column: Reactor Intelligence Core Scene */}
         <div className="lg:col-span-5 flex flex-col items-center justify-center">
           <div className="w-full">
-            <FallbackCore
-              onActivateDossier={scrollToDossiers}
-              onActivateJarvis={onToggleJarvis}
+            <IntelligenceCore
+              onNavigateDossiers={() => scrollToSection("dossiers")}
+              onNavigateExperience={() => scrollToSection("experience")}
+              onNavigateConstellation={() => scrollToSection("constellation")}
+              onToggleJarvis={onToggleJarvis}
             />
           </div>
         </div>
@@ -155,7 +162,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Down Arrow Indicator */}
       <div className="mt-12 flex justify-center">
         <button
-          onClick={scrollToDossiers}
+          onClick={() => scrollToSection("dossiers")}
           aria-label="Scroll down to mission dossiers"
           className="flex flex-col items-center text-cyan/70 hover:text-cyan transition group"
         >
